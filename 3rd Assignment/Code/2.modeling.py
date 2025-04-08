@@ -1,52 +1,68 @@
-# -------------- data_prep.py --------------
-# (оставляем как есть, уже завершено)
+# -------------- main.py --------------
+# Main script that runs the full pipeline step-by-step
+import subprocess
+import os
+import time
 
+def create_directories():
+    """Create necessary directories for outputs"""
+    directories = ["3rd Assignment/figures"]
+    for directory in directories:
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+            print(f"Created directory: {directory}")
 
-# -------------- modeling.py --------------
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-from sklearn.model_selection import cross_val_predict, StratifiedKFold
-from sklearn.linear_model import LogisticRegression
-from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
-from sklearn.metrics import roc_curve, auc
-
+def run_script(script_path):
+    """Run a Python script and handle errors"""
+    print(f"\n{'='*50}")
+    print(f"Running: {script_path}")
+    print(f"{'='*50}\n")
+    
+    start_time = time.time()
+    result = subprocess.run(["python", script_path], capture_output=True, text=True)
+    
+    if result.returncode == 0:
+        print(result.stdout)
+        print(f"\n✅ Successfully completed in {time.time() - start_time:.2f} seconds")
+        return True
+    else:
+        print(f"\n❌ Error running {script_path}:")
+        print(result.stderr)
+        return False
 
 def main():
-    df = pd.read_csv("3rd Assignment/bisnode_firms_fastgrowth.csv")
-
-    y = df["fast_growth"]
-    features = [
-        'sales', 'labor_avg', 'personnel_exp', 'profit_loss_year',
-        'tang_assets', 'intang_assets', 'liq_assets', 'curr_assets',
-        'curr_liab', 'share_eq', 'subscribed_cap', 'age', 'foreign'
+    """Run the full analysis pipeline"""
+    print("Starting Fast Growth Prediction Pipeline")
+    print("-" * 50)
+    
+    # Create necessary directories
+    create_directories()
+    
+    # Define scripts to run in order
+    scripts = [
+        "3rd Assignment/Code/1.data_prep.py",
+        "3rd Assignment/Code/2.modeling.py",
+        "3rd Assignment/Code/3.classification.py",
+        "3rd Assignment/Code/4.industry_comparison.py"
     ]
-
-    X = df[features]
-    skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
-
-    models = {
-        "Logistic Regression": LogisticRegression(max_iter=1000),
-        "Random Forest": RandomForestClassifier(n_estimators=100, random_state=42),
-        "Gradient Boosting": GradientBoostingClassifier(n_estimators=100, random_state=42)
-    }
-
-    plt.figure()
-    for name, model in models.items():
-        y_scores = cross_val_predict(model, X, y, cv=skf, method="predict_proba")[:, 1]
-        fpr, tpr, _ = roc_curve(y, y_scores)
-        roc_auc = auc(fpr, tpr)
-        plt.plot(fpr, tpr, label=f"{name} (AUC = {roc_auc:.2f})")
-
-    plt.plot([0, 1], [0, 1], 'k--')
-    plt.xlabel("False Positive Rate")
-    plt.ylabel("True Positive Rate")
-    plt.title("ROC Curve - All Models")
-    plt.legend(loc="lower right")
-    plt.tight_layout()
-    plt.savefig("3rd Assignment/roc_all_models.png")
-    plt.close()
-    print("ROC curves saved as roc_all_models.png")
+    
+    # Run each script in sequence
+    success = True
+    for script in scripts:
+        if not os.path.exists(script):
+            print(f"\n❌ Script not found: {script}")
+            success = False
+            continue
+            
+        script_success = run_script(script)
+        if not script_success:
+            success = False
+            print("\n⚠️ Continuing with next script despite errors...")
+    
+    if success:
+        print("\n🎉 All steps completed successfully!")
+    else:
+        print("\n⚠️ Pipeline completed with some errors. Check the output above for details.")
 
 if __name__ == "__main__":
     main()

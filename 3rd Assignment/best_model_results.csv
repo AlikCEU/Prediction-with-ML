@@ -1,2 +1,0 @@
-model_name,accuracy,threshold,loss,auc
-GradientBoosting,0.789671844235397,0.16,6760000,0.6578024212345494
